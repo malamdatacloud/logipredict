@@ -1,0 +1,9 @@
+pandas
+numpy
+matplotlib
+shap
+streamlit-shap
+scikit-learn
+tensorflow
+streamlit
+streamlit-aggrid
