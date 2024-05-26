@@ -1,9 +1,10 @@
 pandas
 numpy
-matplotlib
 shap
-streamlit-shap
-scikit-learn
-tensorflow
+matplotlib
 streamlit
-streamlit-aggrid
+streamlit_shap
+tensorflow
+category_encoders
+xgboost
+scikit-learn
