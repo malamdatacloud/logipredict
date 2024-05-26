@@ -1,5 +1,6 @@
 import re
 import json
+import pandas as pd
 
 class UserAuthentication:
     def __init__(self):
@@ -71,29 +72,42 @@ class UserAuthentication:
         else:
             return False
 
-    # Store User Credentials
-    def store_user_details(self,
-                           first_name,
-                           last_name,
-                           email,
-                           username,
-                           password):
-        
-        # Store user details
+    def store_user_details(self, first_name, last_name, email, username, password):
         self.users[username] = {
             'first_name': first_name,
             'last_name': last_name,
             'email': email,
             'password': password,
+            'searches': []  # Initialize an empty list to store user searches
         }
+        self.save_user_data()
 
+    def save_user_data(self):
         with open("user_data.json", 'w') as file:
             json.dump(self.users, file, indent=4)
 
-    # Log In Function
     def log_in(self, username, password):
-        # Check if username exists and password matches
         if username in self.users and self.users[username]['password'] == password:
             return True
-        else:
-            return False
+        return False
+
+    def save_search(self, username, search_data):
+        if username in self.users:
+            self.users[username]['searches'].append(search_data)
+            self.save_user_data()
+
+    def get_user_searches(self, username):
+        if username in self.users:
+            return self.users[username].get('searches', [])
+        return []
+
+    def save_result(self, username, dataframe):
+        if username in self.users:
+            search_data = dataframe.to_dict()
+            self.save_search(username, search_data)
+
+    def get_saved_results(self, username):
+        if username in self.users:
+            searches = self.users[username].get('searches', [])
+            return [pd.DataFrame(search) for search in searches]
+        return []

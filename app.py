@@ -12,61 +12,85 @@ from user_auth import UserAuthentication
 from air.air import predict_top_companies, process_and_visualize
 from ocean.ocean import predict_top_companies, process_and_visualize
 
-with open("C:/Users/User/Desktop/Projects/Fritz/PredictionApp/routes_air.json") as f:
+
+with open("C:/Users/User/Desktop/Projects/Fritz/CopyPrediApp/routes_air.json") as f:
     routes_air = json.load(f)
 
-with open("C:/Users/User/Desktop/Projects/Fritz/PredictionApp/routes_ocean.json") as f:
+with open("C:/Users/User/Desktop/Projects/Fritz/CopyPrediApp/routes_ocean.json") as f:
     routes_ocean = json.load(f)
 
 def main():
     st.title("Welcome to LogiPredict!")
+    st.image("C:/Users/User/Desktop/Projects/Fritz/CopyPrediApp/background.webp",
+             caption="LogiPredict",
+             use_column_width=True)
 
     # Initialize the User Auth Class Object
     auth = UserAuthentication()
-
     st.sidebar.title("User Authentication")
-    login = st.sidebar.checkbox("Log In")
-    if login:
-        username_login = st.sidebar.text_input("Username", 
-                                               key='username_login')
-        password_login = st.sidebar.text_input("Password", 
-                                               type="password",
-                                               key='password_login')
-        if st.sidebar.button("Sign In"):
-            # Call to log_in method from User Auth
-            if auth.log_in(username_login, password_login):
-                st.sidebar.success("Successfully logged in!")
-                display_main_content()
-            else:
-                st.sidebar.error("Invalid Username or Password")
-        
-        else:
-            st.sidebar.title("Sign Up")
-            first_name = st.text_input("First Name",
-                                       key='first_name')
-            last_name = st.text_input("Last Name",
-                                      key='last_name')
-            email = st.text_input("Email",
-                                  key='email')
-            username_sign_up = st.text_input("Username",
-                                             key='username_sign_up')
-            password_sign_up = st.text_input("Password, must contain 1 uppercase, 1 lowercase, 1 number and one of these symbols: !@#$%^&", 
-                                     type="password",
-                                     key='password_sign_up')
-            
-            if st.button("Sign Up"):
-                # Call sign_up method from UserAuth
-                if auth.sign_up(first_name,
-                                last_name,
-                                email,
-                                username_sign_up,
-                                password_sign_up):
-                    st.success("Sign up successful! Please Log In to continue")
+
+    # Check if the user is logged in
+    if 'logged_in' not in st.session_state:
+        st.session_state.logged_in = False
+        st.session_state.username = ""
+
+    # Track the current authentication mode
+    if 'auth_mode' not in st.session_state:
+        st.session_state.auth_mode = None
+
+    if st.session_state.logged_in:
+        display_main_content(auth, st.session_state.username)
+        if st.sidebar.button("View Saved Results"):
+            saved_results = auth.get_user_results(st.session_state.username)
+            st.sidebar.write("Saved Results:")
+            for i, result in enumerate(saved_results):
+                st.sidebar.write(f"Result {i+1}:")
+                st.sidebar.dataframe(result)
+                csv = result.to_csv(index=False).encode()
+                st.sidebar.download_button(
+                    label=f"Download Result {i+1} as CSV",
+                    data=csv,
+                    file_name=f'result_{i+1}.csv',
+                    mime='text/csv',
+                )
+    else:
+        login_button = st.sidebar.button("Log In", key="login_button")
+        signup_button = st.sidebar.button("Sign Up", key="signup_button")
+
+        if login_button:
+            st.session_state.auth_mode = "Log In"
+        if signup_button:
+            st.session_state.auth_mode = "Sign Up"
+
+        if st.session_state.auth_mode == "Log In":
+            username_login = st.sidebar.text_input("Username", key='username_login')
+            password_login = st.sidebar.text_input("Password", type="password", key='password_login')
+            if st.sidebar.button("Sign In", key="signin_button"):
+                if auth.log_in(username_login, password_login):
+                    st.sidebar.success("Successfully logged in!")
+                    st.session_state.logged_in = True
+                    st.session_state.username = username_login
+                    st.experimental_rerun()
                 else:
-                    st.error("Sign up failed, Username may already be taken or password does not meet requirements.")
+                    st.sidebar.error("Invalid Username or Password")
+
+        if st.session_state.auth_mode == "Sign Up":
+            first_name = st.sidebar.text_input("First Name", key='first_name')
+            last_name = st.sidebar.text_input("Last Name", key='last_name')
+            email = st.sidebar.text_input("Email", key='email')
+            username_sign_up = st.sidebar.text_input("Username", key='username_sign_up')
+            password_sign_up = st.sidebar.text_input("Password", type="password", key='password_sign_up')
+            st.sidebar.write("Password must contain 1 uppercase, 1 lowercase, 1 number and one of these symbols: !@#$%^&")
+
+            if st.sidebar.button("Sign Up", key="signup_form_button"):
+                if auth.sign_up(first_name, last_name, email, username_sign_up, password_sign_up):
+                    st.sidebar.success("Sign up successful! Please Log In to continue")
+                    st.session_state.auth_mode = 'Log In'
+                else:
+                    st.sidebar.error("Sign up failed, Username may already be taken or password does not meet requirements.")
 
 # Set Title for the APP
-def display_main_content():
+def display_main_content(auth, username):
     st.title('LogiPredict: Smart Shipping Solutions')
 
     # Dropdown for choosing between Air and Ocean
@@ -866,6 +890,9 @@ def display_main_content():
         all_routes
     )
 
+    # Save list of results per user
+    results = []
+
 
     # Create a submit button
     if st.button('Submit'):
@@ -888,11 +915,14 @@ def display_main_content():
 
                             st.write(f"Predicted Top 3 {transport_type} Shipping Companies are: ")
                             st.dataframe(result_table)
+
+                            # Collect the result table in results list
+                            results.append(result_table)
+
                             #Show feature importance using RandomForest and SHAP
                             for company_name in result_table['Predicted Shipping Companies']:
                                 st.write("Feature Importance for: ", company_name)
-                                process_and_visualize(company_name)
-                            
+                                process_and_visualize(company_name)     
 
                         except Exception as e:
                             st.error(e)
@@ -918,17 +948,36 @@ def display_main_content():
 
                             st.write(f"Predicted Top 3 {transport_type} Shipping Companies are: ")
                             st.dataframe(result_table)
+
+                            # Collect result tables 
+                            results.append(result_table)
+
                             #Show feature importance using RandomForest and SHAP
                             for company_name in result_table['Predicted Shipping Companies']:
                                 st.write("Feature Importance for: ", company_name)
-                                process_and_visualize(company_name)
-                            
-                            
+                                process_and_visualize(company_name)                         
 
                         except Exception as e:
                             st.error(e)
             else:
                 st.write("Please select at least one leg and one route.")
+
+      # Save and download results at the end
+    if results:
+        all_results_df = pd.concat(results, ignore_index=True)
+        
+        # Save the result
+        auth.save_result(username, all_results_df)
+        
+        # Provide download option
+        csv = all_results_df.to_csv(index=False).encode()
+        st.download_button(
+            label="Download all results as CSV",
+            data=csv,
+            file_name='all_search_results.csv',
+            mime='text/csv',
+        )
+    
 
 if __name__ == "__main__":
     main()
