@@ -106,7 +106,7 @@ class UserAuthentication:
             search_data = dataframe.to_dict()
             self.save_search(username, search_data)
 
-    def get_saved_results(self, username):
+    def get_user_results(self, username):
         if username in self.users:
             searches = self.users[username].get('searches', [])
             return [pd.DataFrame(search) for search in searches]

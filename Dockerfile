@@ -4,16 +4,17 @@ FROM python:3.11.9
 # Create a working directory
 WORKDIR /app
 
-# Copy requirements.txt (if you have one)
-COPY requirements.txt .
-# Install dependencies
-RUN pip install -r requirements.txt
+# Copy the current directory contents into the container at /app
+COPY . /app
 
-# Copy your app files and supporting data
-COPY . .
+# Install any needed packages specified in requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose the Streamlit port (default: 8501)
+# Make port 8501 available to the world outside this container
 EXPOSE 8501
 
-# Run the Streamlit app
-CMD ["python", "app.py"]
+# Define environment variable
+ENV PORT 8501
+
+# Run app.py when the container launches
+CMD ["streamlit", "run", "app.py"]
